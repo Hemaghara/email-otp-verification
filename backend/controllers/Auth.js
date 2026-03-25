@@ -5,73 +5,114 @@ import {
 import { generateTokenAndSetCookies } from "../middleware/GenerateToken.js";
 import { Usermodel } from "../models/User.js";
 import bcryptjs from "bcryptjs";
+import crypto from "crypto";
 
-const Reigster = async (req, res) => {
+const Register = async (req, res) => {
   try {
     const { email, password, name } = req.body;
+
     if (!email || !password || !name) {
       return res
         .status(400)
         .json({ success: false, message: "All fields are required" });
     }
-    const ExistsUser = await Usermodel.findOne({ email });
-    if (ExistsUser) {
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
       return res
         .status(400)
-        .json({ success: false, message: "User Already Exists Please Login" });
+        .json({ success: false, message: "Invalid email format" });
     }
-    const hasePassowrd = await bcryptjs.hashSync(password, 10);
-    const verficationToken = Math.floor(
-      100000 + Math.random() * 900000,
-    ).toString();
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        success: false,
+        message: "Password must be at least 6 characters",
+      });
+    }
+
+    const existingUser = await Usermodel.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists. Please login.",
+      });
+    }
+
+    const hashedPassword = await bcryptjs.hash(password, 10);
+
+    const verificationToken = crypto.randomInt(100000, 999999).toString();
+
     const user = new Usermodel({
       email,
-      password: hasePassowrd,
+      password: hashedPassword,
       name,
-      verficationToken,
-      verficationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
+      verificationToken,
+      verificationTokenExpiresAt: Date.now() + 24 * 60 * 60 * 1000,
     });
+
     await user.save();
+
     generateTokenAndSetCookies(res, user._id);
-    await sendVerificationEmail(user.email, verficationToken);
-    return res
-      .status(200)
-      .json({ success: true, message: "User Register Successfully", user });
+
+    await sendVerificationEmail(user.email, verificationToken);
+
+    const {
+      password: _pw,
+      verificationToken: _vt,
+      ...safeUser
+    } = user.toObject();
+
+    return res.status(201).json({
+      success: true,
+      message: "User registered successfully",
+      user: safeUser,
+    });
   } catch (error) {
-    console.log(error);
+    console.error("Register error:", error);
     return res
-      .status(400)
-      .json({ success: false, message: "internal server error" });
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
-const VerfiyEmail = async (req, res) => {
+const VerifyEmail = async (req, res) => {
   try {
     const { code } = req.body;
+
+    if (!code) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Verification code is required" });
+    }
+
     const user = await Usermodel.findOne({
-      verficationToken: code,
-      verficationTokenExpiresAt: { $gt: Date.now() },
+      verificationToken: code,
+      verificationTokenExpiresAt: { $gt: Date.now() },
     });
+
     if (!user) {
       return res
         .status(400)
-        .json({ success: false, message: "Inavlid or Expired Code" });
+        .json({ success: false, message: "Invalid or expired code" });
     }
 
     user.isVerified = true;
-    user.verficationToken = undefined;
-    user.verficationTokenExpiresAt = undefined;
+    user.verificationToken = undefined;
+    user.verificationTokenExpiresAt = undefined;
     await user.save();
+
     await sendWelcomeEmail(user.email, user.name);
+
     return res
       .status(200)
-      .json({ success: true, message: "Email Verifed Successfully" });
+      .json({ success: true, message: "Email verified successfully" });
   } catch (error) {
-    console.log(error);
+    console.error("VerifyEmail error:", error);
     return res
-      .status(400)
-      .json({ success: false, message: "internal server error" });
+      .status(500)
+      .json({ success: false, message: "Internal server error" });
   }
 };
 
-export { Reigster, VerfiyEmail };
+export { Register, VerifyEmail };

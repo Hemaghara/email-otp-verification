@@ -1,39 +1,36 @@
-import { transporter } from "./Email.config.js";
+import { transporter } from './Email.config.js';
 import {
   Verification_Email_Template,
   Welcome_Email_Template,
-} from "./EmailTemplate.js";
+} from './EmailTemplate.js';
+
+const FROM_ADDRESS = `"${process.env.EMAIL_FROM_NAME}" <${process.env.EMAIL_FROM_ADDRESS}>`;
 
 export const sendVerificationEmail = async (email, verificationCode) => {
   try {
     const response = await transporter.sendMail({
-      from: '"Hem" <hemaghara@gmail.com>',
-
+      from: FROM_ADDRESS,
       to: email,
-      subject: "Verify your Email",
-      text: "Verify your Email",
-      html: Verification_Email_Template.replace(
-        "{verificationCode}",
-        verificationCode,
-      ),
+      subject: 'Verify your email',
+      html: Verification_Email_Template.replace('{verificationCode}', verificationCode),
     });
-    console.log("Email send Successfully", response);
+    console.log('Verification email sent:', response.messageId);
   } catch (error) {
-    console.log("Email error", error);
+    console.error('Verification email error:', error);
+    throw error; 
   }
 };
+
 export const sendWelcomeEmail = async (email, name) => {
   try {
     const response = await transporter.sendMail({
-      from: '"Hem" <hemaghara@gmail.com>',
-
+      from: FROM_ADDRESS,
       to: email,
-      subject: "Welcome Email",
-      text: "Welcome Email",
-      html: Welcome_Email_Template.replace("{name}", name),
+      subject: 'Welcome!',
+      html: Welcome_Email_Template.replace('{name}', name),
     });
-    console.log("Email send Successfully", response);
+    console.log('Welcome email sent:', response.messageId);
   } catch (error) {
-    console.log("Email error", error);
+    console.error('Welcome email error:', error);
   }
 };

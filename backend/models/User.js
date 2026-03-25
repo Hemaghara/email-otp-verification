@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
+import mongoose from 'mongoose';
 
-const userShcema = new mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     email: {
       type: String,
@@ -25,10 +25,10 @@ const userShcema = new mongoose.Schema(
     },
     resetPasswordToken: String,
     resetPasswordExpiresAt: Date,
-    verficationToken: String,
-    verficationTokenExpiresAt: Date,
+    verificationToken: String,
+    verificationTokenExpiresAt: Date,
   },
   { timestamps: true },
 );
 
-export const Usermodel = mongoose.model("User", userShcema);
+export const Usermodel = mongoose.model('User', userSchema);
